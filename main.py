@@ -76,15 +76,15 @@ def extractEmail(text):
 
 STOPWORDS = set(stopwords.words("english"))
 EDUCATION = [
-    "BE",
+    "Bachelor of Engineering",
     "B.E.",
     "B.E",
     "BS",
-    "B.S",
+    "Bachelor of Science",
     "ME",
-    "M.E",
+    "Master of Engineering",
     "M.E.",
-    "MS",
+    "Master of Science",
     "M.S",
     "BTECH",
     "B.TECH",
@@ -203,6 +203,8 @@ def extract_projects(resume_text):
 
 
 def extract_work_experience(text):
+    nlp = spacy.load("en_core_web_sm")
+
     # Apply spaCy NLP model to the text
     doc = nlp(text)
 
@@ -211,26 +213,43 @@ def extract_work_experience(text):
         r"(?i)\b(work experience|professional experience|employment history)\b"
     ]
 
+    # Define patterns for other sections that might follow work experience
+    end_section_patterns = [
+        r"(?i)\b(education|skills|projects|certifications|awards|languages|interests)\b"
+    ]
+
     # Find the start of the work experience section
+    start_pos = None
     for pattern in experience_patterns:
         match = re.search(pattern, text)
         if match:
             start_pos = match.end()
             break
-    else:
+
+    if start_pos is None:
         return "Work experience section not found"
+
+    # Find the end of the work experience section
+    end_pos = None
+    for pattern in end_section_patterns:
+        match = re.search(pattern, text[start_pos:])
+        if match:
+            end_pos = start_pos + match.start()
+            break
 
     # Extract sentences related to work experience
     work_experience = []
     for sent in doc.sents:
         if sent.start_char >= start_pos:
+            if end_pos and sent.start_char >= end_pos:
+                break
             work_experience.append(sent.text)
 
     return "\n".join(work_experience)
 
 
 def main():
-    text = extractTextPDF("/Users/swayam/Downloads/ConsultingCV.pdf")
+    text = extractTextPDF("/Users/swayam/Downloads/marmik_resume.pdf")
     print(extractName(text))
     print(extractContact(text))
     print(extractEmail(text))
@@ -244,3 +263,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
