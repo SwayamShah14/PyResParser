@@ -29,7 +29,7 @@ nlp = spacy.load("en_core_web_sm")  # or nlp = spacy.blank("en")
 
 
 def extractTextPDF(path):
-    return extract_text(path)
+    return ''.join([i for i in extract_text(path) if i != '●' and i != '○'])
 
 
 def extractName(text):
@@ -42,6 +42,7 @@ def extractName(text):
             {"POS": "PROPN"},
             {"POS": "PROPN"},
         ],  # First name, Middle name, and Last name
+        [{"POS" : "PROPN"}]  # first name
     ]
 
     for pattern in patterns:
@@ -115,7 +116,7 @@ def extractEducation(text):
             # Replace all special symbols
             tex = re.sub(r"[?|$|.|!|,]", r"", tex)
             if tex.upper() in EDUCATION and tex not in STOPWORDS:
-                edu[tex] = text + nlp_text[index + 1]
+                edu[tex] = text + nlp_text[index]
 
     # Extract year
     education = []
@@ -128,7 +129,7 @@ def extractEducation(text):
     return education
 
 
-def extractSkills(text):
+def extractSkills_empty(text):
     nlp_text = nlp(text)
     noun_chunks = nlp_text.noun_chunks
 
@@ -156,11 +157,68 @@ def extractSkills(text):
 def remove_leading_whitespace(text):
     return "\n".join(line.lstrip() for line in text.splitlines())
 
+def extractSkills(resume_text):
+    # Load the spaCy model
+    resume_text = remove_leading_whitespace(resume_text)
+    nlp = spacy.load("en_core_web_sm",  exclude=["parser"])
+    config = {"punct_chars": ['\n']}
+    nlp.add_pipe("sentencizer", config=config)
+
+
+    # Define keywords related to project sections
+    project_keywords = [
+        "\nskills",
+        "\ntechnical skills",
+        "\nother skills",
+        "\nkey skills -"
+    ]
+    end_section_keywords = [
+        "projects",
+        "\neducation",
+        "\nprofessional summary",
+        "\nsummary"
+        "\ncertifications",
+        "\nawards",
+        "\norganizations",
+    ]
+
+    # Process the resume text with spaCy
+    doc = nlp(resume_text)
+    # Flag to track if we're in the projects section
+    in_work_section = False
+    works = []
+    current_section = []
+    for sent in doc.sents:
+        # Check if this sentence marks the beginning of the projects section
+        if any(keyword in sent.text.lower() for keyword in project_keywords):
+            in_work_section = True
+            current_section.append(sent.text.strip())
+            continue
+        # If we're in the projects section, check if we reach the end of the section
+        if in_work_section and any(
+            keyword in sent.text.lower() for keyword in end_section_keywords
+        ):
+            break
+        # If we're in the projects section, collect the sentences
+        if in_work_section:
+            current_section.append(sent.text.strip())
+    # Join collected sentences to form the project description
+    work_desc = "\n".join(current_section).strip()
+    # Add project description to the projects list if not empty
+    if work_desc:
+        works.append(work_desc)
+    if not works:
+        return extractSkills_empty(resume_text)
+    return ''.join(works)
+
 
 def extract_projects(resume_text):
     # Load the spaCy model
     resume_text = remove_leading_whitespace(resume_text)
-    nlp = spacy.load("en_core_web_sm")
+    nlp = spacy.load("en_core_web_sm",  exclude=["parser"])
+    config = {"punct_chars": ['\n']}
+    nlp.add_pipe("sentencizer", config=config)
+
 
     # Define keywords related to project sections
     project_keywords = [
@@ -190,7 +248,6 @@ def extract_projects(resume_text):
         # Check if this sentence marks the beginning of the projects section
         if any(keyword in sent.text.lower() for keyword in project_keywords):
             in_projects_section = True
-            current_section.append(sent.text.split("\n")[-1])
             continue
         # If we're in the projects section, check if we reach the end of the section
         if in_projects_section and any(
@@ -207,11 +264,63 @@ def extract_projects(resume_text):
         projects.append(project_description)
     return projects
 
+def extractSummary(resume_text):
+    # Load the spaCy model
+    resume_text = remove_leading_whitespace(resume_text)
+    nlp = spacy.load("en_core_web_sm", exclude= ["parser"])
+    config = {"punct_chars": ['\n']}
+    nlp.add_pipe("sentencizer", config=config)
+
+    # Define keywords related to project sections
+    project_keywords = [
+        "\nsummary",
+        "\nprofessional summary",
+        "\npersonal summary",
+        "\nabout me",
+    ]
+    end_section_keywords = [
+        "\nprojects",
+        "\neducation",
+        "\nskills",
+        "\ncertifications",
+        "\nawards",
+        "\norganizations",
+        "\nwork experience"
+    ]
+
+    # Process the resume text with spaCy
+    doc = nlp(resume_text)
+    # Flag to track if we're in the projects section
+    in_work_section = False
+    works = []
+    current_section = []
+    for sent in doc.sents:
+        # Check if this sentence marks the beginning of the projects section
+        if any(keyword in sent.text.lower() for keyword in project_keywords):
+            in_work_section = True
+            continue
+        # If we're in the projects section, check if we reach the end of the section
+        if in_work_section and any(
+            keyword in sent.text.lower() for keyword in end_section_keywords
+        ):
+            break
+        # If we're in the projects section, collect the sentences
+        if in_work_section:
+            current_section.append(sent.text.strip())
+    # Join collected sentences to form the project description
+    work_desc = "\n".join(current_section).strip()
+    # Add project description to the projects list if not empty
+    if work_desc:
+        works.append(work_desc)
+    return ''.join(works)
+
 
 def extract_workex(resume_text):
     # Load the spaCy model
     resume_text = remove_leading_whitespace(resume_text)
-    nlp = spacy.load("en_core_web_sm")
+    nlp = spacy.load('en_core_web_sm', exclude=["parser"])
+    config = {"punct_chars": ['\n']}
+    nlp.add_pipe("sentencizer", config=config)
 
     # Define keywords related to project sections
     project_keywords = [
@@ -239,7 +348,6 @@ def extract_workex(resume_text):
         # Check if this sentence marks the beginning of the projects section
         if any(keyword in sent.text.lower() for keyword in project_keywords):
             in_work_section = True
-            current_section.append(sent.text.split("\n")[-1])
             continue
         # If we're in the projects section, check if we reach the end of the section
         if in_work_section and any(
@@ -258,15 +366,17 @@ def extract_workex(resume_text):
 
 
 def main():
-    text = extractTextPDF("/Users/swayam/Downloads/resume-vaibhav.pdf")
+    text = extractTextPDF("/Users/swayam/Downloads/resume-odoo.pdf")
+    print(text)
     print(extractName(text))
-    print(extractContact(text))
-    print(extractEmail(text))
+    # print(extractContact(text))
+    # print(extractEmail(text))
+    print(extractSummary(text))
     print(extractSkills(text))
-    print(extractEducation(text))
+    # print(extractEducation(text))
     projects = extract_projects(text)
     for project in projects:
-        print(project)
+       print(project)
     workex = extract_workex(text)
     for work in workex:
         print(work)
