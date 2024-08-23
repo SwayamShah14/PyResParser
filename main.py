@@ -366,20 +366,30 @@ def extract_workex(resume_text):
 
 
 def main():
-    text = extractTextPDF("/Users/swayam/Downloads/resume-odoo.pdf")
-    print(text)
+    text = extractTextPDF("/Users/swayam/Downloads/resume-vaibhav.pdf")
+    # print(text)
     print(extractName(text))
     # print(extractContact(text))
     # print(extractEmail(text))
+    print("Summary:")
     print(extractSummary(text))
+    print("Technical Skills:")
     print(extractSkills(text))
-    # print(extractEducation(text))
     projects = extract_projects(text)
-    for project in projects:
-       print(project)
+    if projects:
+        print("Projects")
+        for project in projects:
+            print(project)
     workex = extract_workex(text)
-    for work in workex:
-        print(work)
+    if workex:
+        print("Work Experience")
+        for work in workex:
+            print(work)
+
+
+if __name__ == "__main__":
+    main()
+
 
 
 if __name__ == "__main__":
